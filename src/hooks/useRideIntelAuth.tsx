@@ -5,6 +5,10 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
+function isAuthenticatedSession(session: Session | null) {
+  return Boolean(session?.access_token && session.user?.id && session.user.aud === "authenticated");
+}
+
 export function useRideIntelAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -13,14 +17,16 @@ export function useRideIntelAuth() {
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      const validSession = isAuthenticatedSession(nextSession) ? nextSession : null;
+      setSession(validSession);
+      setUser(validSession?.user ?? null);
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+      const validSession = isAuthenticatedSession(data.session) ? data.session : null;
+      setSession(validSession);
+      setUser(validSession?.user ?? null);
       setLoading(false);
     });
 
