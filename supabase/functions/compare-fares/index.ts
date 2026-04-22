@@ -3,6 +3,13 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2.104.0/cors";
 import { z } from "npm:zod@3.25.76";
 import { buildQuotes, deriveRoute, predictFare } from "../_shared/fare-engine.ts";
 
+const StopSchema = z.object({
+  label: z.string().trim().min(2).max(150),
+  placeId: z.string().trim().max(255).nullish(),
+  lat: z.number().min(-90).max(90).nullish(),
+  lng: z.number().min(-180).max(180).nullish(),
+});
+
 const BodySchema = z.object({
   pickupLabel: z.string().trim().min(2).max(150),
   dropLabel: z.string().trim().min(2).max(150),
@@ -18,6 +25,7 @@ const BodySchema = z.object({
   trafficLevel: z.enum(["light", "moderate", "heavy", "gridlock"]),
   weatherCondition: z.enum(["clear", "cloudy", "rain", "storm"]),
   surgeMultiplier: z.number().min(1).max(5),
+  stops: z.array(StopSchema).max(5).optional(),
 });
 
 Deno.serve(async (req) => {
