@@ -10,7 +10,7 @@ type Props = {
   durationMinutes: number;
 };
 
-const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "AIzaSyD8ikvhsNf8xpkUNuA43--bnrJ6UGlN0eM";
 
 export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, durationMinutes }: Props) {
   const center = polyline[0] ?? { lat: 28.6139, lng: 77.209 };
