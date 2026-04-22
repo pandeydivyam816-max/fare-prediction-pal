@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { APIProvider, AdvancedMarker, Map, useMap } from "@vis.gl/react-google-maps";
 import { MapPinned, Route, KeyRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,8 @@ function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: num
   const map = useMap();
 
   useEffect(() => {
-    if (!map || polyline.length === 0 || !window.google?.maps) return;
+    const googleMaps = (window as any).google?.maps;
+    if (!map || polyline.length === 0 || !googleMaps) return;
 
     if (polyline.length === 1) {
       map.panTo(polyline[0]);
@@ -25,7 +26,7 @@ function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: num
       return;
     }
 
-    const bounds = new window.google.maps.LatLngBounds();
+    const bounds = new googleMaps.LatLngBounds();
     polyline.forEach((point) => bounds.extend(point));
     map.fitBounds(bounds, 56);
   }, [map, polyline]);
@@ -35,7 +36,6 @@ function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: num
 
 export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, durationMinutes }: Props) {
   const center = useMemo(() => polyline[0] ?? { lat: 28.6139, lng: 77.209 }, [polyline]);
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
   return (
     <Card className="overflow-hidden border-border/70 bg-panel/90 shadow-panel backdrop-blur-md">
@@ -48,7 +48,7 @@ export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, duratio
       </CardHeader>
       <CardContent className="space-y-4">
         {googleMapsApiKey ? (
-          <div ref={mapContainerRef} className="overflow-hidden rounded-lg border border-border/70">
+          <div className="overflow-hidden rounded-lg border border-border/70">
             <APIProvider apiKey={googleMapsApiKey}>
               <Map
                 defaultCenter={center}
