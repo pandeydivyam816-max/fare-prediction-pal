@@ -15,6 +15,7 @@ import {
   predictFare,
   saveFavoriteRoute,
   saveRide,
+  type ComparisonQuote,
   type CompareRequest,
   type CompareResponse,
   type PredictResponse,
@@ -43,6 +44,7 @@ const Index = () => {
   const [prediction, setPrediction] = useState<PredictResponse | null>(null);
   const [rides, setRides] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [bookedQuoteSlug, setBookedQuoteSlug] = useState<string | null>(null);
 
   function updateLocationField(field: "pickup" | "drop", value: string) {
     setRequest((curr) => ({
@@ -163,6 +165,44 @@ const Index = () => {
       toast.success("Trip insight saved.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save trip.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleBookQuote(quote: ComparisonQuote) {
+    if (!auth.user || !comparison) return;
+    try {
+      setSaving(true);
+      await saveRide({
+        user_id: auth.user.id,
+        provider_id: quote.providerId,
+        pickup_label: request.pickupLabel,
+        pickup_place_id: request.pickupPlaceId ?? null,
+        pickup_lat: request.pickupLat ?? null,
+        pickup_lng: request.pickupLng ?? null,
+        drop_label: request.dropLabel,
+        drop_place_id: request.dropPlaceId ?? null,
+        drop_lat: request.dropLat ?? null,
+        drop_lng: request.dropLng ?? null,
+        distance_km: comparison.route.distanceKm,
+        duration_minutes: comparison.route.durationMinutes,
+        time_of_day_bucket: request.timeOfDayBucket,
+        traffic_level: request.trafficLevel,
+        weather_condition: request.weatherCondition,
+        surge_multiplier: request.surgeMultiplier,
+        quoted_fare: quote.estimatedFare,
+        predicted_fare: prediction?.predictedFare ?? comparison.predictedFare,
+        actual_fare: null,
+        trip_status: "booked",
+        ride_date: new Date().toISOString(),
+      });
+      const latest = await fetchRideHistory();
+      setRides(latest?.rides ?? []);
+      setBookedQuoteSlug(quote.providerSlug);
+      toast.success(`${quote.providerName} booked for this route.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to book ride.");
     } finally {
       setSaving(false);
     }
@@ -326,8 +366,10 @@ const Index = () => {
           favorites={favorites}
           onSaveTrip={handleSaveTrip}
           onSaveFavorite={handleSaveFavorite}
+          onBookQuote={handleBookQuote}
           saving={saving}
           canPersist={auth.isAuthenticated}
+          bookedQuoteSlug={bookedQuoteSlug}
         />
       </div>
     </main>
