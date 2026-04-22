@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_receipts: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          itinerary_id: string | null
+          payment_method_last4: string | null
+          payment_method_type: string | null
+          provider_name: string | null
+          receipt_data: Json
+          receipt_number: string
+          receipt_status: string
+          ride_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          itinerary_id?: string | null
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          provider_name?: string | null
+          receipt_data?: Json
+          receipt_number: string
+          receipt_status?: string
+          ride_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          itinerary_id?: string | null
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          provider_name?: string | null
+          receipt_data?: Json
+          receipt_number?: string
+          receipt_status?: string
+          ride_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_receipts_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_receipts_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fare_quotes: {
         Row: {
           created_at: string
@@ -133,6 +199,101 @@ export type Database = {
         }
         Relationships: []
       }
+      itineraries: {
+        Row: {
+          booked_at: string | null
+          canceled_at: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          label: string
+          payment_method_last4: string | null
+          payment_method_type: string | null
+          predicted_total_fare: number | null
+          quoted_total_fare: number | null
+          trip_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booked_at?: string | null
+          canceled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          predicted_total_fare?: number | null
+          quoted_total_fare?: number | null
+          trip_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booked_at?: string | null
+          canceled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          predicted_total_fare?: number | null
+          quoted_total_fare?: number | null
+          trip_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      itinerary_stops: {
+        Row: {
+          created_at: string
+          id: string
+          itinerary_id: string
+          label: string
+          lat: number | null
+          lng: number | null
+          place_id: string | null
+          stop_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          itinerary_id: string
+          label: string
+          lat?: number | null
+          lng?: number | null
+          place_id?: string | null
+          stop_order: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          itinerary_id?: string
+          label?: string
+          lat?: number | null
+          lng?: number | null
+          place_id?: string | null
+          stop_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itinerary_stops_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -214,14 +375,29 @@ export type Database = {
       rides: {
         Row: {
           actual_fare: number | null
+          booked_at: string | null
+          booking_reference: string | null
+          canceled_at: string | null
+          completed_at: string | null
           created_at: string
           distance_km: number
+          driver_name: string | null
+          driver_phone: string | null
+          driver_rating: number | null
+          driver_vehicle: string | null
           drop_label: string
           drop_lat: number | null
           drop_lng: number | null
           drop_place_id: string | null
           duration_minutes: number
+          eta_minutes: number | null
           id: string
+          itinerary_id: string | null
+          itinerary_leg_index: number | null
+          itinerary_stop_count: number
+          payment_method_last4: string | null
+          payment_method_type: string | null
+          payment_status: string
           pickup_label: string
           pickup_lat: number | null
           pickup_lng: number | null
@@ -230,6 +406,7 @@ export type Database = {
           provider_id: string | null
           quoted_fare: number | null
           ride_date: string
+          status_updated_at: string
           surge_multiplier: number
           time_of_day_bucket: string
           traffic_level: string
@@ -240,14 +417,29 @@ export type Database = {
         }
         Insert: {
           actual_fare?: number | null
+          booked_at?: string | null
+          booking_reference?: string | null
+          canceled_at?: string | null
+          completed_at?: string | null
           created_at?: string
           distance_km?: number
+          driver_name?: string | null
+          driver_phone?: string | null
+          driver_rating?: number | null
+          driver_vehicle?: string | null
           drop_label: string
           drop_lat?: number | null
           drop_lng?: number | null
           drop_place_id?: string | null
           duration_minutes?: number
+          eta_minutes?: number | null
           id?: string
+          itinerary_id?: string | null
+          itinerary_leg_index?: number | null
+          itinerary_stop_count?: number
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          payment_status?: string
           pickup_label: string
           pickup_lat?: number | null
           pickup_lng?: number | null
@@ -256,6 +448,7 @@ export type Database = {
           provider_id?: string | null
           quoted_fare?: number | null
           ride_date?: string
+          status_updated_at?: string
           surge_multiplier?: number
           time_of_day_bucket?: string
           traffic_level?: string
@@ -266,14 +459,29 @@ export type Database = {
         }
         Update: {
           actual_fare?: number | null
+          booked_at?: string | null
+          booking_reference?: string | null
+          canceled_at?: string | null
+          completed_at?: string | null
           created_at?: string
           distance_km?: number
+          driver_name?: string | null
+          driver_phone?: string | null
+          driver_rating?: number | null
+          driver_vehicle?: string | null
           drop_label?: string
           drop_lat?: number | null
           drop_lng?: number | null
           drop_place_id?: string | null
           duration_minutes?: number
+          eta_minutes?: number | null
           id?: string
+          itinerary_id?: string | null
+          itinerary_leg_index?: number | null
+          itinerary_stop_count?: number
+          payment_method_last4?: string | null
+          payment_method_type?: string | null
+          payment_status?: string
           pickup_label?: string
           pickup_lat?: number | null
           pickup_lng?: number | null
@@ -282,6 +490,7 @@ export type Database = {
           provider_id?: string | null
           quoted_fare?: number | null
           ride_date?: string
+          status_updated_at?: string
           surge_multiplier?: number
           time_of_day_bucket?: string
           traffic_level?: string
@@ -291,6 +500,13 @@ export type Database = {
           weather_condition?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "rides_itinerary_id_fkey"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rides_provider_id_fkey"
             columns: ["provider_id"]

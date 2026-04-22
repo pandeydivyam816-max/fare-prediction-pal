@@ -1,3 +1,9 @@
+export type RouteStopInput = {
+  label: string;
+  lat?: number | null;
+  lng?: number | null;
+};
+
 export type TripInput = {
   pickupLabel: string;
   dropLabel: string;
@@ -11,6 +17,7 @@ export type TripInput = {
   trafficLevel: string;
   weatherCondition: string;
   surgeMultiplier: number;
+  stops?: RouteStopInput[];
 };
 
 export type ProviderRecord = {
@@ -46,33 +53,46 @@ const weatherMultipliers: Record<string, number> = {
 };
 
 export function deriveRoute(input: TripInput) {
-  const coordinateDistance =
-    input.pickupLat != null &&
-    input.pickupLng != null &&
-    input.dropLat != null &&
-    input.dropLng != null
-      ? haversine(input.pickupLat, input.pickupLng, input.dropLat, input.dropLng)
-      : null;
+  const routeStops = [
+    { label: input.pickupLabel, lat: input.pickupLat ?? null, lng: input.pickupLng ?? null },
+    ...(input.stops ?? []).map((stop) => ({ label: stop.label, lat: stop.lat ?? null, lng: stop.lng ?? null })),
+    { label: input.dropLabel, lat: input.dropLat ?? null, lng: input.dropLng ?? null },
+  ];
 
-  const fallbackDistance = Math.max((input.pickupLabel.length + input.dropLabel.length) / 5, 4.5);
+  const segmentDistances = routeStops.slice(0, -1).map((stop, index) => {
+    const next = routeStops[index + 1];
+    if (stop.lat != null && stop.lng != null && next.lat != null && next.lng != null) {
+      return haversine(stop.lat, stop.lng, next.lat, next.lng);
+    }
+
+    return Math.max((stop.label.length + next.label.length) / 6, 3.2);
+  });
+
+  const coordinateDistance = segmentDistances.length ? segmentDistances.reduce((sum, value) => sum + value, 0) : null;
+  const fallbackDistance = Math.max(routeStops.reduce((sum, stop) => sum + stop.label.length, 0) / 8, 4.5);
   const distanceKm = Number((input.distanceKm ?? coordinateDistance ?? fallbackDistance).toFixed(1));
   const speed = input.trafficLevel === "gridlock" ? 14 : input.trafficLevel === "heavy" ? 20 : input.trafficLevel === "moderate" ? 26 : 32;
   const durationMinutes = Number((input.durationMinutes ?? (distanceKm / speed) * 60).toFixed(0));
-  const centerLat = average(input.pickupLat, input.dropLat) ?? 28.6139;
-  const centerLng = average(input.pickupLng, input.dropLng) ?? 77.209;
+
+  const knownPoints = routeStops.filter((stop) => stop.lat != null && stop.lng != null) as Array<{ label: string; lat: number; lng: number }>;
+  const centerLat = knownPoints.length ? knownPoints.reduce((sum, point) => sum + point.lat, 0) / knownPoints.length : 28.6139;
+  const centerLng = knownPoints.length ? knownPoints.reduce((sum, point) => sum + point.lng, 0) / knownPoints.length : 77.209;
+
+  const polyline = routeStops.map((stop, index) => ({
+    lat: stop.lat ?? centerLat + (index - routeStops.length / 2) * 0.02,
+    lng: stop.lng ?? centerLng + (index - routeStops.length / 2) * 0.015,
+  }));
 
   return {
     distanceKm,
     durationMinutes,
-    polyline: [
-      { lat: input.pickupLat ?? centerLat - 0.04, lng: input.pickupLng ?? centerLng - 0.03 },
-      { lat: centerLat, lng: centerLng },
-      { lat: input.dropLat ?? centerLat + 0.04, lng: input.dropLng ?? centerLng + 0.03 },
-    ],
+    polyline,
   };
 }
 
 export function buildQuotes(input: TripInput, route: ReturnType<typeof deriveRoute>, providers: ProviderRecord[]) {
+  const stopPenalty = 1 + (input.stops?.length ?? 0) * 0.08;
+
   return providers
     .map((provider, index) => {
       const base = provider.base_fare + route.distanceKm * provider.price_per_km + route.durationMinutes * provider.price_per_minute;
@@ -80,8 +100,8 @@ export function buildQuotes(input: TripInput, route: ReturnType<typeof deriveRou
       const time = timeMultipliers[input.timeOfDayBucket] ?? 1;
       const weather = weatherMultipliers[input.weatherCondition] ?? 1;
       const providerBias = 1 + index * 0.022;
-      const estimatedFare = Math.round(base * traffic * time * weather * input.surgeMultiplier * provider.surge_multiplier_default * providerBias);
-      const etaMinutes = Math.max(Math.round(route.durationMinutes * 0.65) + provider.eta_bias_minutes, 3);
+      const estimatedFare = Math.round(base * traffic * time * weather * input.surgeMultiplier * provider.surge_multiplier_default * providerBias * stopPenalty);
+      const etaMinutes = Math.max(Math.round(route.durationMinutes * 0.65) + provider.eta_bias_minutes + (input.stops?.length ?? 0) * 4, 3);
       return {
         providerId: provider.id,
         providerName: provider.name,
@@ -89,8 +109,8 @@ export function buildQuotes(input: TripInput, route: ReturnType<typeof deriveRou
         rideType: index === 2 ? "Bike" : index === 1 ? "Mini" : "Premier",
         estimatedFare,
         etaMinutes,
-        confidence: Math.max(76 - index * 3 + Math.round((1.2 - traffic) * 10), 62),
-        explanation: `${provider.name} is reacting to ${input.trafficLevel} traffic and ${input.weatherCondition} weather on this route.`,
+        confidence: Math.max(76 - index * 3 + Math.round((1.2 - traffic) * 10) - (input.stops?.length ?? 0), 62),
+        explanation: `${provider.name} is reacting to ${input.trafficLevel} traffic and ${input.weatherCondition} weather across ${route.polyline.length - 1} legs.`,
       };
     })
     .sort((a, b) => a.estimatedFare - b.estimatedFare);
@@ -98,8 +118,9 @@ export function buildQuotes(input: TripInput, route: ReturnType<typeof deriveRou
 
 export function predictFare(input: TripInput, route: ReturnType<typeof deriveRoute>, historyAverage?: number | null) {
   const demand = (trafficMultipliers[input.trafficLevel] ?? 1) * (timeMultipliers[input.timeOfDayBucket] ?? 1) * (weatherMultipliers[input.weatherCondition] ?? 1);
+  const stopPenalty = 1 + (input.stops?.length ?? 0) * 0.07;
   const baseline = route.distanceKm * 13.8 + route.durationMinutes * 2.2 + 36;
-  const predictedFare = Math.round((historyAverage ?? baseline) * 0.35 + baseline * demand * input.surgeMultiplier * 0.65);
+  const predictedFare = Math.round((historyAverage ?? baseline) * 0.35 + baseline * demand * input.surgeMultiplier * 0.65 * stopPenalty);
 
   return {
     predictedFare,
@@ -109,6 +130,7 @@ export function predictFare(input: TripInput, route: ReturnType<typeof deriveRou
       { label: "Traffic pressure", impact: `${input.trafficLevel} traffic is influencing total trip time and idle cost.` },
       { label: "Time of day", impact: `${input.timeOfDayBucket} demand is shifting base fare intensity.` },
       { label: "Weather", impact: `${input.weatherCondition} conditions increase dispatch pressure and surge probability.` },
+      ...(input.stops?.length ? [{ label: "Stop count", impact: `${input.stops.length} additional stop${input.stops.length > 1 ? "s" : ""} adds dwell time and dispatch complexity.` }] : []),
     ],
   };
 }
@@ -131,11 +153,4 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function average(a?: number | null, b?: number | null) {
-  if (a == null && b == null) return null;
-  if (a == null) return b ?? null;
-  if (b == null) return a;
-  return (a + b) / 2;
 }

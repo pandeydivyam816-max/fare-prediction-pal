@@ -1,24 +1,23 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { BookmarkPlus, Clock3, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { BookmarkPlus, Clock3, Route, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import type { ComparisonQuote, PredictResponse } from "@/lib/fare-api";
-import type { Database } from "@/integrations/supabase/types";
+import type { ComparisonQuote, FavoriteRoute, PredictResponse, RideRecord, RouteStop } from "@/lib/fare-api";
 import { QuoteCard } from "@/components/ride-intel/QuoteCard";
-
-type Ride = Database["public"]["Tables"]["rides"]["Row"];
-type Favorite = Database["public"]["Tables"]["favorite_routes"]["Row"];
 
 type Props = {
   quotes: ComparisonQuote[];
   prediction: PredictResponse | null;
-  rides: Ride[];
-  favorites: Favorite[];
+  rides: RideRecord[];
+  favorites: FavoriteRoute[];
+  itineraryStops: RouteStop[];
   onSaveTrip: () => void;
   onSaveFavorite: () => void;
   onBookQuote: (quote: ComparisonQuote) => void;
+  onSaveItinerary: () => void;
+  onBookItinerary: () => void;
   saving: boolean;
   canPersist: boolean;
   bookedQuoteSlug?: string | null;
@@ -29,9 +28,24 @@ const chartConfig = {
   predicted: { label: "Predicted", color: "hsl(var(--primary))" },
 } satisfies ChartConfig;
 
-export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveTrip, onSaveFavorite, onBookQuote, saving, canPersist, bookedQuoteSlug }: Props) {
+export function ResultsDashboard({
+  quotes,
+  prediction,
+  rides,
+  favorites,
+  itineraryStops,
+  onSaveTrip,
+  onSaveFavorite,
+  onBookQuote,
+  onSaveItinerary,
+  onBookItinerary,
+  saving,
+  canPersist,
+  bookedQuoteSlug,
+}: Props) {
   const bestQuote = quotes[0];
   const worstQuote = quotes[quotes.length - 1];
+  const hasStops = itineraryStops.length > 2;
 
   return (
     <Tabs defaultValue="compare" className="space-y-5">
@@ -80,8 +94,21 @@ export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveT
                   <BookmarkPlus className="h-4 w-4" />
                   Save favorite route
                 </Button>
+                {hasStops ? (
+                  <>
+                    <Button type="button" variant="glass" onClick={onSaveItinerary} disabled={!canPersist || saving}>
+                      <Route className="h-4 w-4" />
+                      Save itinerary
+                    </Button>
+                    <Button type="button" variant="hero" onClick={onBookItinerary} disabled={!canPersist || saving || !bestQuote}>
+                      <Route className="h-4 w-4" />
+                      Book whole itinerary
+                    </Button>
+                  </>
+                ) : null}
               </div>
               {!canPersist ? <p className="text-sm text-muted-foreground">Sign in to save history, routes, and bookings.</p> : null}
+              {hasStops ? <p className="text-sm text-muted-foreground">Multi-stop itinerary detected: save or book all legs in one confirmation.</p> : null}
             </CardContent>
           </Card>
         </div>
@@ -148,7 +175,7 @@ export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveT
                 <div key={ride.id} className="flex flex-col gap-2 rounded-lg border border-border/60 bg-surface/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="font-medium">{ride.pickup_label} → {ride.drop_label}</div>
-                    <div className="text-sm text-muted-foreground">{ride.distance_km.toFixed(1)} km • {ride.duration_minutes.toFixed(0)} min • {ride.trip_status === "booked" ? "Booked" : "Planned"}</div>
+                    <div className="text-sm text-muted-foreground">{ride.distance_km.toFixed(1)} km • {ride.duration_minutes.toFixed(0)} min • {ride.trip_status === "booked" ? "Booked" : ride.trip_status === "completed" ? "Completed" : ride.trip_status === "canceled" ? "Canceled" : "Planned"}</div>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock3 className="h-4 w-4" />

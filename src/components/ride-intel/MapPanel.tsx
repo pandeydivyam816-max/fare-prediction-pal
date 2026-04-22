@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { APIProvider, AdvancedMarker, Map, useMap } from "@vis.gl/react-google-maps";
-import { MapPinned, Route, KeyRound } from "lucide-react";
+import { MapPinned, Route, KeyRound, Navigation } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Props = {
@@ -44,7 +44,7 @@ export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, duratio
           <MapPinned className="h-5 w-5 text-primary" />
           Route map
         </CardTitle>
-        <CardDescription>Google Maps ready routing with live route metrics.</CardDescription>
+        <CardDescription>Map preview updates across your full itinerary, including intermediate stops.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {googleMapsApiKey ? (
@@ -60,8 +60,13 @@ export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, duratio
                 style={{ width: "100%", height: "320px" }}
               >
                 <MapViewportSync polyline={polyline} />
-                {polyline[0] ? <AdvancedMarker position={polyline[0]} /> : null}
-                {polyline[polyline.length - 1] ? <AdvancedMarker position={polyline[polyline.length - 1]} /> : null}
+                {polyline.map((point, index) => (
+                  <AdvancedMarker key={`${point.lat}-${point.lng}-${index}`} position={point}>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-border/70 bg-panel text-panel-foreground shadow-panel">
+                      {index === 0 ? <Navigation className="h-3.5 w-3.5 text-primary" /> : index === polyline.length - 1 ? <MapPinned className="h-3.5 w-3.5 text-accent" /> : <span className="text-[10px] font-semibold">{index}</span>}
+                    </div>
+                  </AdvancedMarker>
+                ))}
               </Map>
             </APIProvider>
           </div>
