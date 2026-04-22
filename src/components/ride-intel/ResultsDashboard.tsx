@@ -1,11 +1,12 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { BadgeIndianRupee, BookmarkPlus, Clock3, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { BookmarkPlus, Clock3, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { ComparisonQuote, PredictResponse } from "@/lib/fare-api";
 import type { Database } from "@/integrations/supabase/types";
+import { QuoteCard } from "@/components/ride-intel/QuoteCard";
 
 type Ride = Database["public"]["Tables"]["rides"]["Row"];
 type Favorite = Database["public"]["Tables"]["favorite_routes"]["Row"];
@@ -17,8 +18,10 @@ type Props = {
   favorites: Favorite[];
   onSaveTrip: () => void;
   onSaveFavorite: () => void;
+  onBookQuote: (quote: ComparisonQuote) => void;
   saving: boolean;
   canPersist: boolean;
+  bookedQuoteSlug?: string | null;
 };
 
 const chartConfig = {
@@ -26,7 +29,7 @@ const chartConfig = {
   predicted: { label: "Predicted", color: "hsl(var(--primary))" },
 } satisfies ChartConfig;
 
-export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveTrip, onSaveFavorite, saving, canPersist }: Props) {
+export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveTrip, onSaveFavorite, onBookQuote, saving, canPersist, bookedQuoteSlug }: Props) {
   const bestQuote = quotes[0];
   const worstQuote = quotes[quotes.length - 1];
 
@@ -43,29 +46,15 @@ export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveT
         <div className="grid gap-4 lg:grid-cols-[1.5fr,1fr]">
           <div className="grid gap-4">
             {quotes.map((quote, index) => (
-              <Card key={`${quote.providerSlug}-${quote.rideType}`} className="border-border/70 bg-panel/90 shadow-panel">
-                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <BadgeIndianRupee className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{quote.providerName}</h3>
-                          <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{quote.rideType}</span>
-                          {index === 0 ? <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">Best value</span> : null}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{quote.explanation}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid gap-2 text-right">
-                    <div className="text-2xl font-semibold">₹{quote.estimatedFare.toFixed(0)}</div>
-                    <div className="text-sm text-muted-foreground">ETA {quote.etaMinutes} min • Confidence {quote.confidence}%</div>
-                  </div>
-                </CardContent>
-              </Card>
+              <QuoteCard
+                key={`${quote.providerSlug}-${quote.rideType}`}
+                quote={quote}
+                index={index}
+                isBooked={bookedQuoteSlug === quote.providerSlug}
+                canBook={canPersist}
+                booking={saving}
+                onBook={onBookQuote}
+              />
             ))}
           </div>
           <Card className="border-border/70 bg-panel/90 shadow-panel">
@@ -92,7 +81,7 @@ export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveT
                   Save favorite route
                 </Button>
               </div>
-              {!canPersist ? <p className="text-sm text-muted-foreground">Sign in to save history and routes.</p> : null}
+              {!canPersist ? <p className="text-sm text-muted-foreground">Sign in to save history, routes, and bookings.</p> : null}
             </CardContent>
           </Card>
         </div>
@@ -159,7 +148,7 @@ export function ResultsDashboard({ quotes, prediction, rides, favorites, onSaveT
                 <div key={ride.id} className="flex flex-col gap-2 rounded-lg border border-border/60 bg-surface/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="font-medium">{ride.pickup_label} → {ride.drop_label}</div>
-                    <div className="text-sm text-muted-foreground">{ride.distance_km.toFixed(1)} km • {ride.duration_minutes.toFixed(0)} min • {ride.trip_status}</div>
+                    <div className="text-sm text-muted-foreground">{ride.distance_km.toFixed(1)} km • {ride.duration_minutes.toFixed(0)} min • {ride.trip_status === "booked" ? "Booked" : "Planned"}</div>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock3 className="h-4 w-4" />
