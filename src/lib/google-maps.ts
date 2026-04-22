@@ -8,64 +8,60 @@ type GeocodeResult = Coordinates & {
   placeId?: string | null;
 };
 
-const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "AIzaSyD8ikvhsNf8xpkUNuA43--bnrJ6UGlN0eM";
+async function fetchLocation<T>(url: string): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
 
-function getGoogleMaps() {
-  return (window as any).google?.maps;
-}
-
-async function waitForGoogleMaps() {
-  if (!googleMapsApiKey) {
-    throw new Error("Google Maps API key is missing.");
+  if (!response.ok) {
+    throw new Error("Unable to fetch location details right now.");
   }
 
-  const existing = getGoogleMaps();
-  if (existing?.Geocoder) return existing;
-
-  for (let index = 0; index < 30; index += 1) {
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    const maps = getGoogleMaps();
-    if (maps?.Geocoder) return maps;
-  }
-
-  throw new Error("Google Maps is still loading. Please try again in a moment.");
+  return response.json() as Promise<T>;
 }
 
 export async function geocodeAddress(address: string): Promise<GeocodeResult> {
-  const googleMaps = await waitForGoogleMaps();
-  const geocoder = new googleMaps.Geocoder();
-  const { results } = await geocoder.geocode({ address });
+  const results = await fetchLocation<Array<{
+    lat: string;
+    lon: string;
+    display_name: string;
+    place_id?: number;
+  }>>(
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+  );
 
-  if (!results?.length) {
+  if (!results.length) {
     throw new Error("Location not found. Please use a more specific place name.");
   }
 
   const result = results[0];
 
   return {
-    lat: result.geometry.location.lat,
-    lng: result.geometry.location.lng,
-    formattedAddress: result.formatted_address,
-    placeId: result.place_id ?? null,
+    lat: Number(result.lat),
+    lng: Number(result.lon),
+    formattedAddress: result.display_name,
+    placeId: result.place_id ? String(result.place_id) : null,
   };
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<GeocodeResult> {
-  const googleMaps = await waitForGoogleMaps();
-  const geocoder = new googleMaps.Geocoder();
-  const { results } = await geocoder.geocode({ location: { lat, lng } });
+  const result = await fetchLocation<{
+    display_name?: string;
+    place_id?: number;
+    error?: string;
+  }>(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
 
-  if (!results?.length) {
+  if (!result.display_name) {
     throw new Error("Unable to resolve your current location.");
   }
-
-  const result = results[0];
 
   return {
     lat,
     lng,
-    formattedAddress: result.formatted_address,
-    placeId: result.place_id ?? null,
+    formattedAddress: result.display_name,
+    placeId: result.place_id ? String(result.place_id) : null,
   };
 }
 

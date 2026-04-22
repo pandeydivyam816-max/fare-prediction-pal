@@ -44,6 +44,16 @@ const Index = () => {
   const [rides, setRides] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
 
+  function updateLocationField(field: "pickup" | "drop", value: string) {
+    setRequest((curr) => ({
+      ...curr,
+      [`${field}Label`]: value,
+      [`${field}Lat`]: null,
+      [`${field}Lng`]: null,
+      [`${field}PlaceId`]: null,
+    }));
+  }
+
   const stats = useMemo(
     () => [
       { label: "Providers tracked", value: comparison?.quotes.length ?? 3, icon: CarFront },
@@ -204,11 +214,11 @@ const Index = () => {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Pickup</label>
-                <Input value={request.pickupLabel} onChange={(e) => setRequest((curr) => ({ ...curr, pickupLabel: e.target.value }))} />
+                <Input value={request.pickupLabel} onChange={(e) => updateLocationField("pickup", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Drop</label>
-                <Input value={request.dropLabel} onChange={(e) => setRequest((curr) => ({ ...curr, dropLabel: e.target.value }))} />
+                <Input value={request.dropLabel} onChange={(e) => updateLocationField("drop", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Time of day</label>
