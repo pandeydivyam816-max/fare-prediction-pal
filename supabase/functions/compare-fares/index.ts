@@ -30,6 +30,9 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
 
+  const authHeader = req.headers.get("Authorization");
+  const hasBearerToken = Boolean(authHeader && authHeader.startsWith("Bearer ") && authHeader.length > 12);
+
   const parsed = BodySchema.safeParse(await req.json());
   if (!parsed.success) {
     return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
@@ -38,14 +41,16 @@ Deno.serve(async (req) => {
     });
   }
 
-  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-  });
+  const userClient = hasBearerToken
+    ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        global: { headers: { Authorization: authHeader ?? "" } },
+      })
+    : null;
   const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   const [{ data: providers, error: providersError }, authResult] = await Promise.all([
     serviceClient.from("providers").select("id,name,slug,base_fare,price_per_km,price_per_minute,surge_multiplier_default,eta_bias_minutes").eq("is_active", true),
-    userClient.auth.getUser(),
+    userClient ? userClient.auth.getUser() : Promise.resolve({ data: { user: null }, error: null }),
   ]);
 
   if (providersError) {

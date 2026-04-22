@@ -55,6 +55,9 @@ Deno.serve(async (req) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
 
+  const authHeader = req.headers.get("Authorization");
+  const hasBearerToken = Boolean(authHeader && authHeader.startsWith("Bearer ") && authHeader.length > 12);
+
   const body = BodySchema.safeParse(await req.json());
   if (!body.success) {
     return new Response(JSON.stringify({ error: body.error.flatten() }), {
@@ -63,12 +66,16 @@ Deno.serve(async (req) => {
     });
   }
 
-  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
-  });
+  const userClient = hasBearerToken
+    ? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        global: { headers: { Authorization: authHeader ?? "" } },
+      })
+    : null;
   const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  const { data: authData, error: authError } = await userClient.auth.getUser();
+  const { data: authData, error: authError } = userClient
+    ? await userClient.auth.getUser()
+    : { data: { user: null }, error: null };
   if (authError || !authData.user) {
     return new Response(JSON.stringify({ error: "Authentication required." }), {
       status: 401,
