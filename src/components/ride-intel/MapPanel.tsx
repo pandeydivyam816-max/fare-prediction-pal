@@ -1,4 +1,5 @@
-import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
+import { useEffect, useMemo, useRef } from "react";
+import { APIProvider, AdvancedMarker, Map, useMap } from "@vis.gl/react-google-maps";
 import { MapPinned, Route, KeyRound } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,8 +13,29 @@ type Props = {
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "AIzaSyD8ikvhsNf8xpkUNuA43--bnrJ6UGlN0eM";
 
+function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: number }> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || polyline.length === 0 || !window.google?.maps) return;
+
+    if (polyline.length === 1) {
+      map.panTo(polyline[0]);
+      map.setZoom(14);
+      return;
+    }
+
+    const bounds = new window.google.maps.LatLngBounds();
+    polyline.forEach((point) => bounds.extend(point));
+    map.fitBounds(bounds, 56);
+  }, [map, polyline]);
+
+  return null;
+}
+
 export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, durationMinutes }: Props) {
-  const center = polyline[0] ?? { lat: 28.6139, lng: 77.209 };
+  const center = useMemo(() => polyline[0] ?? { lat: 28.6139, lng: 77.209 }, [polyline]);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
 
   return (
     <Card className="overflow-hidden border-border/70 bg-panel/90 shadow-panel backdrop-blur-md">
@@ -26,16 +48,18 @@ export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, duratio
       </CardHeader>
       <CardContent className="space-y-4">
         {googleMapsApiKey ? (
-          <div className="overflow-hidden rounded-lg border border-border/70">
+          <div ref={mapContainerRef} className="overflow-hidden rounded-lg border border-border/70">
             <APIProvider apiKey={googleMapsApiKey}>
               <Map
                 defaultCenter={center}
+                center={center}
                 defaultZoom={11}
                 gestureHandling="greedy"
                 disableDefaultUI
                 mapId="ride-intel-map"
                 style={{ width: "100%", height: "320px" }}
               >
+                <MapViewportSync polyline={polyline} />
                 {polyline[0] ? <AdvancedMarker position={polyline[0]} /> : null}
                 {polyline[polyline.length - 1] ? <AdvancedMarker position={polyline[polyline.length - 1]} /> : null}
               </Map>
