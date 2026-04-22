@@ -10,28 +10,37 @@ type GeocodeResult = Coordinates & {
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "AIzaSyD8ikvhsNf8xpkUNuA43--bnrJ6UGlN0eM";
 
-async function runGeocode(url: string) {
+function getGoogleMaps() {
+  return (window as any).google?.maps;
+}
+
+async function waitForGoogleMaps() {
   if (!googleMapsApiKey) {
     throw new Error("Google Maps API key is missing.");
   }
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Unable to fetch map location details.");
+  const existing = getGoogleMaps();
+  if (existing?.Geocoder) return existing;
+
+  for (let index = 0; index < 30; index += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    const maps = getGoogleMaps();
+    if (maps?.Geocoder) return maps;
   }
 
-  const data = await response.json();
-  if (data.status !== "OK" || !data.results?.length) {
-    throw new Error("Location not found. Please use a more specific place name.");
-  }
-
-  return data.results[0];
+  throw new Error("Google Maps is still loading. Please try again in a moment.");
 }
 
 export async function geocodeAddress(address: string): Promise<GeocodeResult> {
-  const result = await runGeocode(
-    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${googleMapsApiKey}`,
-  );
+  const googleMaps = await waitForGoogleMaps();
+  const geocoder = new googleMaps.Geocoder();
+  const { results } = await geocoder.geocode({ address });
+
+  if (!results?.length) {
+    throw new Error("Location not found. Please use a more specific place name.");
+  }
+
+  const result = results[0];
 
   return {
     lat: result.geometry.location.lat,
@@ -42,9 +51,15 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<GeocodeResult> {
-  const result = await runGeocode(
-    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsApiKey}`,
-  );
+  const googleMaps = await waitForGoogleMaps();
+  const geocoder = new googleMaps.Geocoder();
+  const { results } = await geocoder.geocode({ location: { lat, lng } });
+
+  if (!results?.length) {
+    throw new Error("Unable to resolve your current location.");
+  }
+
+  const result = results[0];
 
   return {
     lat,
