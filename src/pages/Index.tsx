@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useRideIntelAuth } from "@/hooks/useRideIntelAuth";
+import { geocodeAddress, getCurrentPosition, reverseGeocode } from "@/lib/google-maps";
 import {
   compareFares,
   fetchRideHistory,
@@ -37,6 +38,7 @@ const Index = () => {
   const [request, setRequest] = useState<CompareRequest>(defaultRequest);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [comparison, setComparison] = useState<CompareResponse | null>(null);
   const [prediction, setPrediction] = useState<PredictResponse | null>(null);
   const [rides, setRides] = useState<any[]>([]);
@@ -65,7 +67,27 @@ const Index = () => {
   async function runAnalysis() {
     try {
       setLoading(true);
-      const [compareData, predictData] = await Promise.all([compareFares(request), predictFare(request)]);
+      const normalizedRequest = { ...request };
+
+      if (normalizedRequest.pickupLabel.trim()) {
+        const pickup = await geocodeAddress(normalizedRequest.pickupLabel.trim());
+        normalizedRequest.pickupLabel = pickup.formattedAddress;
+        normalizedRequest.pickupLat = pickup.lat;
+        normalizedRequest.pickupLng = pickup.lng;
+        normalizedRequest.pickupPlaceId = pickup.placeId;
+      }
+
+      if (normalizedRequest.dropLabel.trim()) {
+        const drop = await geocodeAddress(normalizedRequest.dropLabel.trim());
+        normalizedRequest.dropLabel = drop.formattedAddress;
+        normalizedRequest.dropLat = drop.lat;
+        normalizedRequest.dropLng = drop.lng;
+        normalizedRequest.dropPlaceId = drop.placeId;
+      }
+
+      setRequest(normalizedRequest);
+
+      const [compareData, predictData] = await Promise.all([compareFares(normalizedRequest), predictFare(normalizedRequest)]);
       setComparison(compareData);
       setPrediction(predictData);
     } catch (error) {
@@ -78,6 +100,26 @@ const Index = () => {
   useEffect(() => {
     runAnalysis();
   }, []);
+
+  async function handleUseCurrentLocation() {
+    try {
+      setLocating(true);
+      const coords = await getCurrentPosition();
+      const place = await reverseGeocode(coords.lat, coords.lng);
+      setRequest((curr) => ({
+        ...curr,
+        pickupLabel: place.formattedAddress,
+        pickupLat: coords.lat,
+        pickupLng: coords.lng,
+        pickupPlaceId: place.placeId,
+      }));
+      toast.success("Pickup updated to your current location.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to fetch current location.");
+    } finally {
+      setLocating(false);
+    }
+  }
 
   async function handleSaveTrip() {
     if (!auth.user || !comparison) return;
@@ -205,6 +247,10 @@ const Index = () => {
               <Button type="button" variant="hero" onClick={runAnalysis} disabled={loading}>
                 <MapPin className="h-4 w-4" />
                 {loading ? "Analyzing route..." : "Compare fares"}
+              </Button>
+              <Button type="button" variant="glass" onClick={handleUseCurrentLocation} disabled={locating || loading}>
+                <MapPin className="h-4 w-4" />
+                {locating ? "Finding location..." : "Use current location"}
               </Button>
               <Button type="button" variant="glass" onClick={() => setRequest(defaultRequest)}>
                 Reset sample route
