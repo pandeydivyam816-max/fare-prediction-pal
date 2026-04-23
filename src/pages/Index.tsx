@@ -231,12 +231,22 @@ const Index = () => {
   }
 
   function handleBookQuote(quote: ComparisonQuote) {
+    if (!auth.isAuthenticated) {
+      toast.error("Please sign in before booking a ride.");
+      return;
+    }
+
     setSelectedQuote(quote);
     setBookingMode("ride");
     setBookingDialogOpen(true);
   }
 
   function handleBookItinerary() {
+    if (!auth.isAuthenticated) {
+      toast.error("Please sign in before booking an itinerary.");
+      return;
+    }
+
     if (!comparison?.quotes[0]) return;
     setSelectedQuote(comparison.quotes[0]);
     setBookingMode("itinerary");
