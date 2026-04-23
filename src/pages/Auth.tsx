@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { AuthPanel } from "@/components/ride-intel/AuthPanel";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,13 @@ import { useRideIntelAuth } from "@/hooks/useRideIntelAuth";
 
 const Auth = () => {
   const auth = useRideIntelAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!auth.loading && auth.isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [auth.isAuthenticated, auth.loading, navigate]);
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
