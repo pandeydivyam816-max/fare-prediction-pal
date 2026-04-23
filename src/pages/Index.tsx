@@ -504,10 +504,28 @@ const Index = () => {
                     Open bookings
                   </Link>
                 </Button>
+                <Button asChild type="button" variant="glass">
+                  <Link to="/auth">
+                    Account dashboard
+                  </Link>
+                </Button>
               </div>
             </div>
 
-            <AuthPanel isAuthenticated={auth.isAuthenticated} loading={auth.loading} profile={auth.profile} />
+            <Card className="border-border/70 bg-panel/90 shadow-panel backdrop-blur-md">
+              <CardHeader>
+                <CardTitle className="text-lg">Account access</CardTitle>
+                <CardDescription>Use the dedicated auth dashboard for sign in and sign up.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-border/70 bg-surface/70 p-4 text-sm text-muted-foreground">
+                  {auth.isAuthenticated ? "You are signed in and your saved booking tools are active." : "Sign in or create an account to save trips, routes, and bookings."}
+                </div>
+                <Button asChild className="w-full" variant="hero">
+                  <Link to="/auth">Open auth dashboard</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </section>
 
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
