@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { BarChart3, CarFront, CloudRain, ListOrdered, MapPin, Receipt, TimerReset } from "lucide-react";
 import { toast } from "sonner";
 import { AuthPanel } from "@/components/ride-intel/AuthPanel";
@@ -52,6 +52,7 @@ const emptyStop: RouteStop = { label: "", placeId: null, lat: null, lng: null };
 
 const Index = () => {
   const auth = useRideIntelAuth();
+  const navigate = useNavigate();
   const [request, setRequest] = useState<CompareRequest>(defaultRequest);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -104,6 +105,12 @@ const Index = () => {
     if (!auth.isAuthenticated) return;
     refreshHistory().catch(() => undefined);
   }, [auth.isAuthenticated]);
+
+  useEffect(() => {
+    if (!auth.loading && !auth.isAuthenticated) {
+      navigate("/auth", { replace: true });
+    }
+  }, [auth.isAuthenticated, auth.loading, navigate]);
 
   function updateLocationField(field: "pickup" | "drop", value: string) {
     setRequest((curr) => ({
