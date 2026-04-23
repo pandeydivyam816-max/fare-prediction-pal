@@ -18,9 +18,11 @@ type Props = {
   onBookQuote: (quote: ComparisonQuote) => void;
   onSaveItinerary: () => void;
   onBookItinerary: () => void;
+  onCancelRide: (rideId: string) => void;
   saving: boolean;
   canPersist: boolean;
   bookedQuoteSlug?: string | null;
+  cancelingRideId?: string | null;
 };
 
 const chartConfig = {
@@ -39,9 +41,11 @@ export function ResultsDashboard({
   onBookQuote,
   onSaveItinerary,
   onBookItinerary,
+  onCancelRide,
   saving,
   canPersist,
   bookedQuoteSlug,
+  cancelingRideId,
 }: Props) {
   const bestQuote = quotes[0];
   const worstQuote = quotes[quotes.length - 1];
@@ -88,17 +92,17 @@ export function ResultsDashboard({
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                 <Button type="button" variant="hero" onClick={onSaveTrip} disabled={!canPersist || saving}>
                   <TrendingUp className="h-4 w-4" />
-                  Save trip insight
+                  {canPersist ? "Save trip insight" : "Sign in to save trip"}
                 </Button>
                 <Button type="button" variant="glass" onClick={onSaveFavorite} disabled={!canPersist || saving}>
                   <BookmarkPlus className="h-4 w-4" />
-                  Save favorite route
+                  {canPersist ? "Save favorite route" : "Sign in to save route"}
                 </Button>
                 {hasStops ? (
                   <>
                     <Button type="button" variant="glass" onClick={onSaveItinerary} disabled={!canPersist || saving}>
                       <Route className="h-4 w-4" />
-                      Save itinerary
+                      {canPersist ? "Save itinerary" : "Sign in to save itinerary"}
                     </Button>
                     <Button type="button" variant="hero" onClick={onBookItinerary} disabled={saving || !bestQuote}>
                       <Route className="h-4 w-4" />
@@ -177,9 +181,16 @@ export function ResultsDashboard({
                     <div className="font-medium">{ride.pickup_label} → {ride.drop_label}</div>
                     <div className="text-sm text-muted-foreground">{ride.distance_km.toFixed(1)} km • {ride.duration_minutes.toFixed(0)} min • {ride.trip_status === "booked" ? "Booked" : ride.trip_status === "completed" ? "Completed" : ride.trip_status === "canceled" ? "Canceled" : "Planned"}</div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock3 className="h-4 w-4" />
-                    ₹{ride.actual_fare ?? ride.predicted_fare ?? ride.quoted_fare ?? 0}
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock3 className="h-4 w-4" />
+                      ₹{ride.actual_fare ?? ride.predicted_fare ?? ride.quoted_fare ?? 0}
+                    </div>
+                    {ride.trip_status === "planned" || ride.trip_status === "booked" ? (
+                      <Button type="button" size="sm" variant="destructive" onClick={() => onCancelRide(ride.id)} disabled={cancelingRideId === ride.id}>
+                        {cancelingRideId === ride.id ? "Canceling..." : "Cancel"}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               ))
