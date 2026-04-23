@@ -23,6 +23,7 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
 
 export function BookingsPage({ rides, itineraries, itineraryStops, receipts, onCancelRide, cancelingRideId }: Props) {
   const bookedRides = rides.filter((ride) => ["planned", "booked", "completed", "canceled"].includes(ride.trip_status));
+  const standaloneRides = bookedRides.filter((ride) => !ride.itinerary_id);
   const bookedItineraries = itineraries.filter((itinerary) => ["planned", "booked", "completed", "canceled"].includes(itinerary.trip_status));
 
   return (
@@ -34,7 +35,7 @@ export function BookingsPage({ rides, itineraries, itineraryStops, receipts, onC
             <CardDescription>Track booking status, cancel active rides, and review driver and ETA details.</CardDescription>
           </CardHeader>
           <CardContent>
-            {bookedRides.length ? (
+            {standaloneRides.length ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -47,7 +48,7 @@ export function BookingsPage({ rides, itineraries, itineraryStops, receipts, onC
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookedRides.map((ride) => (
+                  {standaloneRides.map((ride) => (
                     <TableRow key={ride.id}>
                       <TableCell>
                         <div className="font-medium">{ride.pickup_label} → {ride.drop_label}</div>
@@ -101,6 +102,9 @@ export function BookingsPage({ rides, itineraries, itineraryStops, receipts, onC
             <CardContent className="space-y-3">
               {bookedItineraries.length ? bookedItineraries.map((itinerary) => {
                 const stops = itineraryStops.filter((stop) => stop.itinerary_id === itinerary.id).sort((a, b) => a.stop_order - b.stop_order);
+                const itineraryRides = bookedRides
+                  .filter((ride) => ride.itinerary_id === itinerary.id)
+                  .sort((a, b) => (a.itinerary_leg_index ?? 0) - (b.itinerary_leg_index ?? 0));
                 return (
                   <div key={itinerary.id} className="rounded-lg border border-border/60 bg-surface/70 p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -113,6 +117,27 @@ export function BookingsPage({ rides, itineraries, itineraryStops, receipts, onC
                       <Badge variant={statusVariant[itinerary.trip_status] ?? "outline"} className="capitalize">{itinerary.trip_status}</Badge>
                     </div>
                     <div className="mt-3 text-sm text-muted-foreground">{stops.length > 1 ? `${stops.length - 1} legs` : "1 leg"} • ₹{(itinerary.quoted_total_fare ?? itinerary.predicted_total_fare ?? 0).toFixed(0)}</div>
+                    {itineraryRides.length ? (
+                      <div className="mt-4 space-y-2">
+                        {itineraryRides.map((ride) => (
+                          <div key={ride.id} className="flex flex-col gap-3 rounded-md border border-border/60 bg-background/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <div className="font-medium">Leg {ride.itinerary_leg_index ?? 1}: {ride.pickup_label} → {ride.drop_label}</div>
+                              <div className="text-xs text-muted-foreground">{ride.driver_name ? `${ride.driver_name} • ${ride.driver_vehicle ?? "Vehicle pending"}` : "Driver assigned after booking"}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant={statusVariant[ride.trip_status] ?? "outline"} className="capitalize">{ride.trip_status}</Badge>
+                              {ride.trip_status === "booked" ? (
+                                <Button type="button" variant="destructive" size="sm" onClick={() => onCancelRide(ride.id)} disabled={cancelingRideId === ride.id}>
+                                  <XCircle className="h-4 w-4" />
+                                  {cancelingRideId === ride.id ? "Canceling..." : "Cancel leg"}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 );
               }) : <div className="rounded-lg border border-dashed border-border/70 bg-surface/60 p-6 text-sm text-muted-foreground">Save an itinerary with extra stops to see it here.</div>}
