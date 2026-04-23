@@ -14,6 +14,7 @@ import { useRideIntelAuth } from "@/hooks/useRideIntelAuth";
 import { geocodeAddress, getCurrentPosition, reverseGeocode } from "@/lib/google-maps";
 import {
   bookItinerary,
+  cancelRide,
   compareFares,
   fetchRideHistory,
   saveFavoriteRoute,
@@ -68,6 +69,7 @@ const Index = () => {
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [activeReceipts, setActiveReceipts] = useState<BookingReceipt[]>([]);
+  const [cancelingRideId, setCancelingRideId] = useState<string | null>(null);
 
   const itineraryRouteStops = useMemo<RouteStop[]>(() => {
     const middleStops = (request.stops ?? []).filter((stop) => stop.label.trim().length > 0);
@@ -194,7 +196,14 @@ const Index = () => {
   }
 
   async function handleSaveTrip() {
-    if (!auth.user || !comparison) return;
+    if (!auth.user) {
+      toast.error("Please sign in before saving a trip.");
+      return;
+    }
+    if (!comparison) {
+      toast.error("Run a fare comparison before saving this trip.");
+      return;
+    }
     try {
       setSaving(true);
       await saveRide({
@@ -318,7 +327,10 @@ const Index = () => {
   }
 
   async function handleSaveFavorite() {
-    if (!auth.user) return;
+    if (!auth.user) {
+      toast.error("Please sign in before saving a favorite route.");
+      return;
+    }
     try {
       setSaving(true);
       await saveFavoriteRoute({
@@ -343,7 +355,18 @@ const Index = () => {
   }
 
   async function handleSaveItinerary() {
-    if (!auth.user || !comparison || itineraryRouteStops.length < 3) return;
+    if (!auth.user) {
+      toast.error("Please sign in before saving an itinerary.");
+      return;
+    }
+    if (!comparison) {
+      toast.error("Run a fare comparison before saving an itinerary.");
+      return;
+    }
+    if (itineraryRouteStops.length < 3) {
+      toast.error("Add at least one intermediate stop to save an itinerary.");
+      return;
+    }
     try {
       setSaving(true);
       await saveItinerary({
@@ -365,6 +388,24 @@ const Index = () => {
       toast.error(error instanceof Error ? error.message : "Failed to save itinerary.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCancelRide(rideId: string) {
+    if (!auth.user) {
+      toast.error("Please sign in before canceling a ride.");
+      return;
+    }
+
+    try {
+      setCancelingRideId(rideId);
+      await cancelRide(rideId);
+      await refreshHistory();
+      toast.success("Ride canceled.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to cancel ride.");
+    } finally {
+      setCancelingRideId(null);
     }
   }
 
@@ -525,9 +566,11 @@ const Index = () => {
             onBookQuote={handleBookQuote}
             onSaveItinerary={handleSaveItinerary}
             onBookItinerary={handleBookItinerary}
+            onCancelRide={handleCancelRide}
             saving={saving}
             canPersist={auth.isAuthenticated}
             bookedQuoteSlug={bookedQuoteSlug}
+            cancelingRideId={cancelingRideId}
           />
         </div>
       </main>

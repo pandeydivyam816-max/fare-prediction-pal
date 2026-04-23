@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CreditCard, Landmark, Wallet } from "lucide-react";
+import { CreditCard, Landmark, ShieldCheck, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,25 @@ export function BookingDialog({ open, onOpenChange, quote, saving, stops, onConf
         </DialogHeader>
 
         <div className="space-y-5">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-sm">
+            <div className="flex items-center gap-2 font-medium text-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Demo payment only</div>
+            <p className="mt-1 text-muted-foreground">This booking flow uses fake payment details for testing. No real charge will be made.</p>
+            <Button
+              type="button"
+              variant="glass"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                setMethodType("card");
+                setProviderLabel("Demo Visa");
+                setHolderName("Test Rider");
+                setLast4("4242");
+              }}
+            >
+              Use demo payment details
+            </Button>
+          </div>
+
           <div className="rounded-lg border border-border/70 bg-surface/70 p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
