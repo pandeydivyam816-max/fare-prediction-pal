@@ -67,7 +67,7 @@ const Index = () => {
   const [bookingMode, setBookingMode] = useState<"ride" | "itinerary">("ride");
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
-  const [activeReceipt, setActiveReceipt] = useState<BookingReceipt | null>(null);
+  const [activeReceipts, setActiveReceipts] = useState<BookingReceipt[]>([]);
 
   const itineraryRouteStops = useMemo<RouteStop[]>(() => {
     const middleStops = (request.stops ?? []).filter((stop) => stop.label.trim().length > 0);
@@ -247,7 +247,7 @@ const Index = () => {
     if (!auth.user || !comparison || !selectedQuote) return;
     try {
       setSaving(true);
-      let receipt: BookingReceipt | null = null;
+      let nextReceipts: BookingReceipt[] = [];
 
       if (bookingMode === "itinerary" && itineraryRouteStops.length > 2) {
         const result = await bookItinerary({
@@ -264,7 +264,7 @@ const Index = () => {
           stops: itineraryRouteStops,
           payment_method: paymentMethod,
         });
-        receipt = (result.receipts?.[0] as BookingReceipt | undefined) ?? null;
+        nextReceipts = (result.receipts ?? []) as BookingReceipt[];
       } else {
         const result = await saveRide({
           user_id: auth.user.id,
@@ -291,14 +291,14 @@ const Index = () => {
           ride_date: new Date().toISOString(),
           payment_method: paymentMethod,
         });
-        receipt = (result.receipt as BookingReceipt | undefined) ?? null;
+        nextReceipts = result.receipt ? [result.receipt as BookingReceipt] : [];
       }
 
       await refreshHistory();
       setBookedQuoteSlug(selectedQuote.providerSlug);
       setBookingDialogOpen(false);
-      setActiveReceipt(receipt);
-      setReceiptDialogOpen(Boolean(receipt));
+      setActiveReceipts(nextReceipts);
+      setReceiptDialogOpen(nextReceipts.length > 0);
       toast.success(bookingMode === "itinerary" ? "Itinerary booked successfully." : `${selectedQuote.providerName} booked for this route.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to book ride.");
@@ -523,7 +523,7 @@ const Index = () => {
       </main>
 
       <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} quote={selectedQuote} saving={saving} stops={itineraryRouteStops} onConfirm={finalizeBooking} />
-      <ReceiptDialog open={receiptDialogOpen} onOpenChange={setReceiptDialogOpen} receipt={activeReceipt} />
+      <ReceiptDialog open={receiptDialogOpen} onOpenChange={setReceiptDialogOpen} receipts={activeReceipts} />
     </>
   );
 };
