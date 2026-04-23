@@ -100,9 +100,9 @@ export function ResultsDashboard({
                       <Route className="h-4 w-4" />
                       Save itinerary
                     </Button>
-                    <Button type="button" variant="hero" onClick={onBookItinerary} disabled={!canPersist || saving || !bestQuote}>
+                    <Button type="button" variant="hero" onClick={onBookItinerary} disabled={saving || !bestQuote}>
                       <Route className="h-4 w-4" />
-                      Book whole itinerary
+                      {canPersist ? "Book whole itinerary" : "Sign in to book itinerary"}
                     </Button>
                   </>
                 ) : null}

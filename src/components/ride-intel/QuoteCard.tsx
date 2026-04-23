@@ -45,9 +45,9 @@ export function QuoteCard({ quote, index, isBooked, canBook, booking, onBook }: 
         </div>
 
         <div className="flex justify-end">
-          <Button type="button" variant={isBooked ? "glass" : "hero"} onClick={() => onBook(quote)} disabled={!canBook || booking}>
+          <Button type="button" variant={isBooked ? "glass" : "hero"} onClick={() => onBook(quote)} disabled={booking}>
             <CheckCircle2 className="h-4 w-4" />
-            {isBooked ? "Booked" : booking ? "Booking..." : "Book this ride"}
+            {isBooked ? "Booked" : booking ? "Booking..." : canBook ? "Book this ride" : "Sign in to book"}
           </Button>
         </div>
       </CardContent>
