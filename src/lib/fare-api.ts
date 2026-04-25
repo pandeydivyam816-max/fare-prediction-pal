@@ -1,6 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+async function invokeAuthed<T>(name: string, body: unknown) {
+  // Ensure we have a valid, non-expired access token before calling the function.
+  // If the stored session is stale (e.g. signed out elsewhere, refresh token revoked),
+  // sign out locally and surface a clear error instead of sending a dead JWT.
+  const { data: sessionData } = await supabase.auth.getSession();
+  let session = sessionData.session;
+
+  const expiresAt = session?.expires_at ? session.expires_at * 1000 : 0;
+  if (!session || expiresAt - Date.now() < 60_000) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) {
+      await supabase.auth.signOut().catch(() => undefined);
+      throw new Error("Your session expired. Please sign in again.");
+    }
+    session = refreshed.session;
+  }
+
+  return supabase.functions.invoke<T>(name, {
+    body,
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+}
+
 export type RouteStop = {
   label: string;
   placeId?: string | null;
