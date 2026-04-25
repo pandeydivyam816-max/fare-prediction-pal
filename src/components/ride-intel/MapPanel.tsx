@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { forwardRef, useEffect, useMemo } from "react";
 import { APIProvider, AdvancedMarker, Map, useMap } from "@vis.gl/react-google-maps";
 import { MapPinned, Route, KeyRound, Navigation } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ type Props = {
 
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "AIzaSyD8ikvhsNf8xpkUNuA43--bnrJ6UGlN0eM";
 
-function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: number }> }) {
+const MapViewportSync = forwardRef<HTMLDivElement, { polyline: Array<{ lat: number; lng: number }> }>(({ polyline }, _ref) => {
   const map = useMap();
 
   useEffect(() => {
@@ -32,7 +32,8 @@ function MapViewportSync({ polyline }: { polyline: Array<{ lat: number; lng: num
   }, [map, polyline]);
 
   return null;
-}
+});
+MapViewportSync.displayName = "MapViewportSync";
 
 export function MapPanel({ pickupLabel, dropLabel, polyline, distanceKm, durationMinutes }: Props) {
   const center = useMemo(() => polyline[0] ?? { lat: 28.6139, lng: 77.209 }, [polyline]);
