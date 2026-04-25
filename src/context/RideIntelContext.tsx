@@ -176,7 +176,7 @@ export function RideIntelProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [request]);
+  }, [loading, request]);
 
   // Run initial analysis once auth resolves
   const [didInitialAnalysis, setDidInitialAnalysis] = useState(false);
