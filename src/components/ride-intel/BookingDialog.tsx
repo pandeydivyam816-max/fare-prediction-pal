@@ -30,9 +30,9 @@ export function BookingDialog({ open, onOpenChange, quote, saving, stops, onConf
   useEffect(() => {
     if (!open) return;
     setMethodType("card");
-    setProviderLabel("Visa");
-    setHolderName("");
-    setLast4("");
+    setProviderLabel("Demo Visa");
+    setHolderName("Test Rider");
+    setLast4("4242");
   }, [open]);
 
   const estimatedTotal = useMemo(() => {
