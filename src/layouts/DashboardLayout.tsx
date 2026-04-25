@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
 import { useRideIntel } from "@/context/RideIntelContext";
@@ -24,9 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const navItems = [
-  { title: "Compare fares", url: "/compare", icon: ScanSearch },
+  { title: "Compare", url: "/compare", icon: ScanSearch },
   { title: "Bookings", url: "/bookings", icon: Receipt },
-  { title: "Predictions", url: "/predictions", icon: BarChart3 },
+  { title: "Predict", url: "/predictions", icon: BarChart3 },
   { title: "History", url: "/history", icon: History },
   { title: "Favorites", url: "/favorites", icon: BookmarkCheck },
   { title: "Account", url: "/account", icon: UserCircle },
@@ -34,6 +35,7 @@ const navItems = [
 
 function AppSidebar() {
   const { auth } = useRideIntel();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -52,7 +54,7 @@ function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Dashboards</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -61,6 +63,7 @@ function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end
+                      onClick={() => isMobile && setOpenMobile(false)}
                       className="hover:bg-muted/50"
                       activeClassName="bg-muted text-primary font-medium"
                     >
@@ -87,6 +90,25 @@ function AppSidebar() {
   );
 }
 
+function TopDashboardNav() {
+  return (
+    <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-3 py-2">
+      {navItems.map((item) => (
+        <NavLink
+          key={item.url}
+          to={item.url}
+          end
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          activeClassName="bg-muted text-primary font-medium"
+        >
+          <item.icon className="h-4 w-4" />
+          <span>{item.title}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 export default function DashboardLayout() {
   const { auth, bookingDialogOpen, setBookingDialogOpen, selectedQuote, saving, itineraryRouteStops, finalizeBooking, receiptDialogOpen, setReceiptDialogOpen, activeReceipts } = useRideIntel();
   const navigate = useNavigate();
@@ -98,7 +120,7 @@ export default function DashboardLayout() {
   }, [auth.loading, auth.isAuthenticated, navigate]);
 
   if (auth.loading) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Loading your dashboard...</div>;
   }
 
   if (!auth.isAuthenticated) {
@@ -109,10 +131,12 @@ export default function DashboardLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center border-b border-border/60 bg-panel/60 backdrop-blur">
-            <SidebarTrigger className="ml-2" />
-            <div className="ml-3 text-sm text-muted-foreground">Signed in as <span className="text-foreground">{auth.user?.email}</span></div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 border-b border-border/60 bg-panel/90 backdrop-blur">
+            <div className="flex h-12 items-center">
+              <SidebarTrigger className="ml-2 shrink-0" />
+              <TopDashboardNav />
+            </div>
           </header>
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-7xl space-y-6">
