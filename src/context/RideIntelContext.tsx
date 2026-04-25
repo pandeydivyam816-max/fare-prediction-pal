@@ -153,14 +153,24 @@ export function RideIntelProvider({ children }: { children: ReactNode }) {
   }
 
   const runAnalysis = useCallback(async () => {
+    if (loading) return;
+
     try {
       setLoading(true);
       const normalizedRequest = await normalizeRequest(request);
       setRequest(normalizedRequest);
       const [compareData, predictData] = await Promise.all([compareFares(normalizedRequest), predictFare(normalizedRequest)]);
+
+      if (!compareData?.quotes?.length) {
+        throw new Error("No provider quotes returned for this route.");
+      }
+
       setComparison(compareData);
       setPrediction(predictData);
+      toast.success(`Loaded ${compareData.quotes.length} provider quotes.`);
     } catch (error) {
+      setComparison(null);
+      setPrediction(null);
       toast.error(error instanceof Error ? error.message : "Unable to analyze route.");
     } finally {
       setLoading(false);
