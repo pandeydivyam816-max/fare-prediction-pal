@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { BadgeIndianRupee, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,9 +13,9 @@ type Props = {
   onBook: (quote: ComparisonQuote) => void;
 };
 
-export function QuoteCard({ quote, index, isBooked, canBook, booking, onBook }: Props) {
+export const QuoteCard = forwardRef<HTMLDivElement, Props>(({ quote, index, isBooked, canBook, booking, onBook }, ref) => {
   return (
-    <Card className="border-border/70 bg-panel/90 shadow-panel">
+    <Card ref={ref} className="border-border/70 bg-panel/90 shadow-panel">
       <CardContent className="flex flex-col gap-4 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
@@ -45,7 +46,7 @@ export function QuoteCard({ quote, index, isBooked, canBook, booking, onBook }: 
         </div>
 
         <div className="flex justify-end">
-          <Button type="button" variant={isBooked ? "glass" : "hero"} onClick={() => onBook(quote)} disabled={booking}>
+          <Button type="button" variant={isBooked ? "glass" : "hero"} onClick={() => onBook(quote)} disabled={booking || !canBook}>
             <CheckCircle2 className="h-4 w-4" />
             {isBooked ? "Booked" : booking ? "Booking..." : canBook ? "Book this ride" : "Sign in to book"}
           </Button>
@@ -53,4 +54,6 @@ export function QuoteCard({ quote, index, isBooked, canBook, booking, onBook }: 
       </CardContent>
     </Card>
   );
-}
+});
+
+QuoteCard.displayName = "QuoteCard";
