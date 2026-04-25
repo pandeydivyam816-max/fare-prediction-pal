@@ -1,6 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+async function invokeAuthed<T>(name: string, body: unknown) {
+  // Ensure we have a valid, non-expired access token before calling the function.
+  // If the stored session is stale (e.g. signed out elsewhere, refresh token revoked),
+  // sign out locally and surface a clear error instead of sending a dead JWT.
+  const { data: sessionData } = await supabase.auth.getSession();
+  let session = sessionData.session;
+
+  const expiresAt = session?.expires_at ? session.expires_at * 1000 : 0;
+  if (!session || expiresAt - Date.now() < 60_000) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) {
+      await supabase.auth.signOut().catch(() => undefined);
+      throw new Error("Your session expired. Please sign in again.");
+    }
+    session = refreshed.session;
+  }
+
+  return supabase.functions.invoke<T>(name, {
+    body,
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+}
+
 export type RouteStop = {
   label: string;
   placeId?: string | null;
@@ -177,62 +200,52 @@ export async function predictFare(payload: CompareRequest) {
 }
 
 export async function fetchRideHistory() {
-  const { data, error } = await supabase.functions.invoke<HistoryResponse>("ride-history", { body: { action: "list" } });
-
+  const { data, error } = await invokeAuthed<HistoryResponse>("ride-history", { action: "list" });
   if (error) throw error;
   return data;
 }
 
 export async function saveRide(payload: RideDraft) {
-  const { data, error } = await supabase.functions.invoke<{ ride: RideRecord; receipt?: BookingReceipt }>("ride-history", {
-    body: { action: "saveRide", payload },
+  const { data, error } = await invokeAuthed<{ ride: RideRecord; receipt?: BookingReceipt }>("ride-history", {
+    action: "saveRide",
+    payload,
   });
-
   if (error) throw error;
   return data;
 }
 
 export async function saveFavoriteRoute(payload: Database["public"]["Tables"]["favorite_routes"]["Insert"]) {
-  const { data, error } = await supabase.functions.invoke("ride-history", {
-    body: { action: "saveFavorite", payload },
-  });
-
+  const { data, error } = await invokeAuthed("ride-history", { action: "saveFavorite", payload });
   if (error) throw error;
   return data;
 }
 
 export async function cancelRide(rideId: string) {
-  const { data, error } = await supabase.functions.invoke<{ ride: RideRecord }>("ride-history", {
-    body: { action: "cancelRide", payload: { ride_id: rideId } },
+  const { data, error } = await invokeAuthed<{ ride: RideRecord }>("ride-history", {
+    action: "cancelRide",
+    payload: { ride_id: rideId },
   });
-
   if (error) throw error;
   return data;
 }
 
 export async function saveItinerary(payload: ItineraryDraft) {
-  const { data, error } = await supabase.functions.invoke<{
+  const { data, error } = await invokeAuthed<{
     itinerary: ItineraryRecord;
     rides: RideRecord[];
     itineraryStops: ItineraryStopRecord[];
-  }>("ride-history", {
-    body: { action: "saveItinerary", payload },
-  });
-
+  }>("ride-history", { action: "saveItinerary", payload });
   if (error) throw error;
   return data;
 }
 
 export async function bookItinerary(payload: ItineraryDraft & { payment_method: PaymentMethodInput }) {
-  const { data, error } = await supabase.functions.invoke<{
+  const { data, error } = await invokeAuthed<{
     itinerary: ItineraryRecord;
     rides: RideRecord[];
     itineraryStops: ItineraryStopRecord[];
     receipts: BookingReceipt[];
-  }>("ride-history", {
-    body: { action: "bookItinerary", payload },
-  });
-
+  }>("ride-history", { action: "bookItinerary", payload });
   if (error) throw error;
   return data;
 }
