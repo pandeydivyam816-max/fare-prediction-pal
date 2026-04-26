@@ -35,7 +35,7 @@ function DirectionsLayer({
 }) {
   const map = useMap();
   const routesLibrary = useMapsLibrary("routes");
-  const [renderer, setRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
+  const [renderer, setRenderer] = useState<any>(null);
 
   // Initialize the renderer once.
   useEffect(() => {
@@ -73,7 +73,7 @@ function DirectionsLayer({
         destination,
         waypoints: middle,
         optimizeWaypoints: true,
-        travelMode: google.maps.TravelMode.DRIVING,
+        travelMode: "DRIVING" as any,
         provideRouteAlternatives: false,
       })
       .then((result) => {
