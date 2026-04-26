@@ -242,9 +242,11 @@ Deno.serve(async (req) => {
   }
 
   if (body.data.action === "saveItinerary" || body.data.action === "bookItinerary") {
+    const itineraryAction = body.data;
+    const payload = itineraryAction.payload;
     const nowIso = new Date().toISOString();
-    const isBooked = body.data.action === "bookItinerary";
-    const paymentMethod = body.data.payload.payment_method;
+    const isBooked = itineraryAction.action === "bookItinerary";
+    const paymentMethod = payload.payment_method;
     const itineraryStatus = isBooked ? "booked" : "planned";
 
     const itineraryResult = await serviceClient
