@@ -242,9 +242,11 @@ Deno.serve(async (req) => {
   }
 
   if (body.data.action === "saveItinerary" || body.data.action === "bookItinerary") {
+    const itineraryAction = body.data;
+    const payload = itineraryAction.payload;
     const nowIso = new Date().toISOString();
-    const isBooked = body.data.action === "bookItinerary";
-    const paymentMethod = body.data.payload.payment_method;
+    const isBooked = itineraryAction.action === "bookItinerary";
+    const paymentMethod = payload.payment_method;
     const itineraryStatus = isBooked ? "booked" : "planned";
 
     const itineraryResult = await serviceClient
@@ -272,7 +274,7 @@ Deno.serve(async (req) => {
     }
 
     const itinerary = itineraryResult.data;
-    const stopRows = body.data.payload.stops.map((stop, index) => ({
+    const stopRows = payload.stops.map((stop, index) => ({
       itinerary_id: itinerary.id,
       user_id: authData.user.id,
       stop_order: index,
@@ -290,16 +292,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const legCount = Math.max(body.data.payload.stops.length - 1, 1);
-    const legFare = body.data.payload.quoted_fare != null ? Math.round(body.data.payload.quoted_fare / legCount) : null;
-    const legPrediction = body.data.payload.predicted_fare != null ? Math.round(body.data.payload.predicted_fare / legCount) : null;
+    const legCount = Math.max(payload.stops.length - 1, 1);
+    const legFare = payload.quoted_fare != null ? Math.round(payload.quoted_fare / legCount) : null;
+    const legPrediction = payload.predicted_fare != null ? Math.round(payload.predicted_fare / legCount) : null;
 
-    const rideRows = body.data.payload.stops.slice(0, -1).map((stop, index) => {
-      const next = body.data.payload.stops[index + 1];
-      const driverProfile = buildDriverProfile(body.data.payload.provider_name ?? undefined, index + 1);
+    const rideRows = payload.stops.slice(0, -1).map((stop, index) => {
+      const next = payload.stops[index + 1];
+      const driverProfile = buildDriverProfile(payload.provider_name ?? undefined, index + 1);
       return {
         user_id: authData.user.id,
-        provider_id: body.data.payload.provider_id ?? null,
+        provider_id: payload.provider_id ?? null,
         pickup_label: stop.label,
         pickup_place_id: stop.placeId ?? null,
         pickup_lat: stop.lat ?? null,
@@ -308,12 +310,12 @@ Deno.serve(async (req) => {
         drop_place_id: next.placeId ?? null,
         drop_lat: next.lat ?? null,
         drop_lng: next.lng ?? null,
-        distance_km: Math.max(2.5, Number((body.data.payload.stops.length * 2.4 + index * 0.8).toFixed(1))),
+        distance_km: Math.max(2.5, Number((payload.stops.length * 2.4 + index * 0.8).toFixed(1))),
         duration_minutes: Math.max(10, 12 + index * 6),
-        time_of_day_bucket: body.data.payload.time_of_day_bucket,
-        traffic_level: body.data.payload.traffic_level,
-        weather_condition: body.data.payload.weather_condition,
-        surge_multiplier: body.data.payload.surge_multiplier,
+        time_of_day_bucket: payload.time_of_day_bucket,
+        traffic_level: payload.traffic_level,
+        weather_condition: payload.weather_condition,
+        surge_multiplier: payload.surge_multiplier,
         quoted_fare: legFare,
         predicted_fare: legPrediction,
         actual_fare: null,
@@ -334,7 +336,7 @@ Deno.serve(async (req) => {
         status_updated_at: nowIso,
         itinerary_id: itinerary.id,
         itinerary_leg_index: index + 1,
-        itinerary_stop_count: body.data.payload.stops.length,
+        itinerary_stop_count: payload.stops.length,
       };
     });
 
@@ -353,7 +355,7 @@ Deno.serve(async (req) => {
         ride_id: ride.id,
         itinerary_id: itinerary.id,
         receipt_number: createReceiptNumber(index + 1),
-        provider_name: body.data.payload.provider_name ?? null,
+        provider_name: payload.provider_name ?? null,
         amount: ride.quoted_fare ?? ride.predicted_fare ?? 0,
         currency: "INR",
         payment_method_type: paymentMethod.methodType,
