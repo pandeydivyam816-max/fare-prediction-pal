@@ -28,18 +28,18 @@ export default function Compare() {
 
   return (
     <>
-      <section className="space-y-6 rounded-[calc(var(--radius)+8px)] border border-border/70 bg-panel/85 p-6 shadow-glow backdrop-blur-md">
+      <section className="space-y-5 rounded-[calc(var(--radius)+8px)] border border-border/70 bg-panel/85 p-4 shadow-glow backdrop-blur-md sm:p-6">
         <div className="space-y-2">
           <div className="inline-flex items-center rounded-full border border-border/70 bg-surface/80 px-3 py-1 text-xs text-muted-foreground">
             Compare fares
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Plan a route and compare provider quotes.</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">Plan a route and compare provider quotes.</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
             Add stops, adjust traffic and weather, then get live fare comparisons across providers.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">Pickup</label>
             <Input value={request.pickupLabel} onChange={(e) => setRequest((c) => ({ ...c, pickupLabel: e.target.value, pickupLat: null, pickupLng: null, pickupPlaceId: null }))} />
@@ -49,7 +49,7 @@ export default function Compare() {
             <Input value={request.dropLabel} onChange={(e) => setRequest((c) => ({ ...c, dropLabel: e.target.value, dropLat: null, dropLng: null, dropPlaceId: null }))} />
           </div>
           {(request.stops ?? []).map((stop, index) => (
-            <div key={`stop-${index}`} className="space-y-2 md:col-span-2">
+            <div key={`stop-${index}`} className="space-y-2 sm:col-span-2">
               <div className="flex items-center justify-between gap-3">
                 <label className="text-sm text-muted-foreground">Stop {index + 1}</label>
                 <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setRequest((c) => ({ ...c, stops: (c.stops ?? []).filter((_, i) => i !== index) }))}>
@@ -59,8 +59,8 @@ export default function Compare() {
               <Input value={stop.label} onChange={(e) => setRequest((c) => ({ ...c, stops: (c.stops ?? []).map((s, i) => i === index ? { ...s, label: e.target.value, lat: null, lng: null, placeId: null } : s) }))} placeholder="Add an intermediate stop" />
             </div>
           ))}
-          <div className="md:col-span-2">
-            <Button type="button" variant="glass" onClick={() => setRequest((c) => ({ ...c, stops: [...(c.stops ?? []), emptyStop] }))}>
+          <div className="sm:col-span-2">
+            <Button type="button" variant="glass" size="sm" onClick={() => setRequest((c) => ({ ...c, stops: [...(c.stops ?? []), emptyStop] }))}>
               <ListOrdered className="h-4 w-4" />
               Add stop
             </Button>
@@ -89,32 +89,32 @@ export default function Compare() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button type="button" variant="hero" onClick={runAnalysis} disabled={loading}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+          <Button type="button" variant="hero" onClick={runAnalysis} disabled={loading} className="col-span-2 sm:col-auto">
             <MapPin className="h-4 w-4" />
             {loading ? "Analyzing route..." : "Compare fares"}
           </Button>
           <Button type="button" variant="glass" onClick={handleUseCurrentLocation} disabled={locating || loading}>
             <MapPin className="h-4 w-4" />
-            {locating ? "Finding location..." : "Use current location"}
+            <span className="truncate">{locating ? "Finding..." : "Current location"}</span>
           </Button>
-          <Button type="button" variant="glass" onClick={resetSampleRoute}>Reset sample route</Button>
-          <Button asChild type="button" variant="glass">
+          <Button type="button" variant="glass" onClick={resetSampleRoute}>Reset route</Button>
+          <Button asChild type="button" variant="glass" className="col-span-2 sm:col-auto">
             <Link to="/bookings"><Receipt className="h-4 w-4" />Open bookings</Link>
           </Button>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <Card key={item.label} className="border-border/70 bg-panel/90 shadow-panel">
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/12 text-primary">
+            <CardContent className="flex items-center gap-3 p-3 sm:gap-4 sm:p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary sm:h-11 sm:w-11">
                 <item.icon className="h-5 w-5" />
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground">{item.label}</div>
-                <div className="text-xl font-semibold capitalize">{item.value}</div>
+              <div className="min-w-0">
+                <div className="truncate text-xs text-muted-foreground sm:text-sm">{item.label}</div>
+                <div className="truncate text-base font-semibold capitalize sm:text-xl">{item.value}</div>
               </div>
             </CardContent>
           </Card>
